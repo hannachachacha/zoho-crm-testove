@@ -15,5 +15,3 @@
 
 ## API
 - [Офіційне API НБУ](https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=USD&json)
-
-
