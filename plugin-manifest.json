@@ -1,0 +1,10 @@
+{
+  "service": "CRM",
+  "widget": {
+    "name": "Exchange Rate Widget",
+    "location": "crm.tab.relatedlist", 
+    "module": "Deals",
+    "url": "/app/widget.html",
+    "type": "html"
+  }
+}

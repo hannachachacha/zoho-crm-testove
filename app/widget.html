@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Exchange Rate Widget</title>
+    <script src="https://live.zwidgets.com/js-sdk/1.4/ZohoEmbededAppSDK.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 10px;
+      }
+      #updateBtn {
+        display: none;
+        padding: 6px 12px;
+        background: #007bff;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+      }
+      #updateBtn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="exchange-widget">
+      <p>Курс НБУ: <span id="nbuRate">—</span></p>
+      <p>Курс в угоді: <span id="dealRate">—</span></p>
+      <p>Різниця: <span id="diff">—</span></p>
+      <button id="updateBtn">Записати курс в Угоду</button>
+    </div>
+
+    <script>
+      ZOHO.embeddedApp.on("PageLoad", function (data) {
+        const dealId = Array.isArray(data.EntityId)
+          ? data.EntityId[0]
+          : data.EntityId;
+        if (!dealId) return;
+
+        ZOHO.CRM.API.getRecord({ Entity: "Deals", RecordID: dealId })
+          .then(function (response) {
+            const dealRateRaw = response.data[0]["Exchange_rate_test"];
+            const dealRate = dealRateRaw ? parseFloat(dealRateRaw).toFixed(2) : null;
+
+            fetch("https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=USD&json")
+              .then((res) => res.json())
+              .then((data) => {
+                const nbuRateRaw = data[0].rate;
+                const nbuRate = parseFloat(nbuRateRaw).toFixed(2);
+
+                if (dealRate && nbuRate) {
+                  const diff = ((dealRate / nbuRate - 1) * 100).toFixed(1);
+                  document.getElementById("nbuRate").innerText = nbuRate;
+                  document.getElementById("dealRate").innerText = dealRate;
+                  document.getElementById("diff").innerText = diff + "%";
+
+                  if (parseFloat(diff) >= 5 || parseFloat(diff) <= -5) {
+                    const btn = document.getElementById("updateBtn");
+                    btn.style.display = "inline-block";
+
+                    btn.onclick = function () {
+                      ZOHO.CRM.API.updateRecord({
+                        Entity: "Deals",
+                        APIData: { id: dealId, Exchange_rate_test: nbuRate },
+                      }).then((res) => {
+                        document.getElementById("dealRate").innerText = nbuRate;
+                        document.getElementById("diff").innerText = "0%";
+                        alert(
+                          "Курс оновлено до " +
+                            nbuRate +
+                            ". В поле Курс валют дані підтягнуться після оновлення сторінки."
+                        );
+                        btn.style.display = "none";
+                      });
+                    };
+                  }
+                }
+              })
+              .catch((err) => console.error("Помилка API НБУ:", err));
+          })
+          .catch((err) => console.error("Помилка CRM API:", err));
+      });
+
+      ZOHO.embeddedApp.init();
+    </script>
+  </body>
+</html>
